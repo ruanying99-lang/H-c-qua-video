@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luyện Nói Tiếng Trung Qua Video Ngắn</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.19.6/dist/pinyin-pro.min.js"></script>
+  <style>
+    /* Quan trọng: cho phép bôi đen văn bản trong tất cả các phần tử phụ đề */
+    .sentence-list,
+    .sentence-card,
+    .sentence-card *,
+    .sub-chinese,
+    .sub-pinyin,
+    .sub-vietnamese,
+    .listening-input-wrapper,
+    .listening-input {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      cursor: text !important;
+      pointer-events: auto !important;
+    }
+
+    .controls-group .btn {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    #vocabFloatingPopup {
+      user-select: none;
+      pointer-events: auto;
+    }
+    #vocabFloatingPopup input {
+      user-select: text;
+      pointer-events: auto;
+    }
+
+    .sentence-list-wrapper {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="top-bar-left" style="display: flex; gap: 12px; align-items: center;">
+        <span style="font-size: 1.5rem;">🇨🇳</span>
+        <button id="btnToggleLibrary" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" title="Ẩn/Hiện Thư Viện Video">📚 Thư Viện Video</button>
+        <button id="btnOpenVocabHub" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" title="Mở Sổ Từ Vựng của bạn">📓 Sổ Từ Vựng</button>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <button id="themeToggle" class="theme-switch-btn" title="Chuyển đổi Giao diện">
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <button id="btnOpenUploadModal" class="btn btn-primary">➕ Tải Video Mới</button>
+      </div>
+    </div>
+
+    <header>
+      <div class="header-title-wrap">
+        <h1>Short Video Shadowing</h1>
+      </div>
+      <p>Hệ thống luyện nói & lồng tiếng tiếng Trung trên nền tảng Video ngắn</p>
+    </header>
+
+    <main class="main-layout library-collapsed" id="mainLayout">
+      <!-- CỘT 1: THƯ VIỆN VIDEO -->
+      <aside class="library-section dashboard-card">
+        <h2>📚 Thư Viện Video</h2>
+        <div id="videoLibraryList" class="library-list"></div>
+      </aside>
+
+      <!-- CỘT 2: TRÌNH PHÁT VIDEO & PHÒNG GHI ÂM -->
+      <section class="video-section dashboard-card">
+        <h2 id="currentVideoTitle">Chọn một video để học</h2>
+
+        <div class="video-player-container">
+          <video id="mainVideo" crossorigin="anonymous"></video>
+          <div class="custom-video-controls" id="customVideoControls">
+            <button id="btnPlayPause" class="ctrl-btn" title="Phát / Tạm dừng">▶</button>
+            <div class="timeline-container">
+              <input type="range" id="videoTimeline" min="0" max="100" value="0" step="0.1" class="timeline-slider" />
+            </div>
+            <span id="timeDisplay" class="time-display">00:00 / 00:00</span>
+            <div class="speed-selector-wrapper">
+              <select id="videoSpeed" class="speed-selector" title="Tốc độ phát">
+                <option value="0.5">0.5x</option>
+                <option value="0.75">0.75x</option>
+                <option value="1.0" selected>1.0x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+              </select>
+            </div>
+            <button id="btnLoopSentence" class="ctrl-btn-toggle" title="Tự động lặp lại câu thoại đang chọn">🔁 Lặp Câu</button>
+          </div>
+        </div>
+
+        <!-- COMPARISON STUDIO WAVEFORMS -->
+        <div class="visualizers-wrapper" style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="visualizer-container" style="min-height: 70px; padding: 6px 12px;">
+            <canvas id="waveformOriginalCanvas" width="600" height="50"></canvas>
+            <div class="visualizer-status" style="font-size: 0.7rem; bottom: 4px; left: 8px;">Mẫu Gốc (Original Video)</div>
+          </div>
+          <div class="visualizer-container" style="min-height: 70px; padding: 6px 12px;">
+            <canvas id="waveformUserCanvas" width="600" height="50"></canvas>
+            <div class="visualizer-status" id="visualizerUserStatus" style="font-size: 0.7rem; bottom: 4px; left: 8px;">Giọng Của Bạn (Your Recording)</div>
+          </div>
+          <div id="visualizerStatus" style="font-size: 0.78rem; color: var(--text-secondary); text-align: center; font-weight: 600; margin-top: -2px;">Sóng âm: Sẵn sàng so sánh</div>
+        </div>
+
+        <div class="global-controls">
+          <button id="btnPlayFullVideo" class="btn btn-secondary">▶ Phát Video Gốc</button>
+          <button id="btnRecordFullVideo" class="btn btn-danger">🎙️ Thu Âm Cả Bài (Lồng Tiếng)</button>
+          <button id="btnPlayFullDubbing" class="btn btn-accent" disabled>▶️ Nghe Bản Lồng Tiếng Cả Bài</button>
+        </div>
+      </section>
+
+      <!-- CỘT 3: LUYỆN TẬP TỪNG CÂU -->
+      <section class="practice-section dashboard-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap;">
+          <h2 style="margin: 0; border: none; padding: 0;">💬 Câu Thoại Chi Tiết</h2>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div id="listeningControls" style="display: none; align-items: center; gap: 6px; margin-right: 4px;">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Ẩn:</span>
+              <select id="selectListeningHideMode" class="speed-selector" style="padding: 4px 8px; font-size: 0.8rem; height: 32px;" title="Chọn phần hiển thị để ẩn và điền từ">
+                <option value="hanzi" selected>Chữ Hán</option>
+                <option value="vietnamese">Dịch Nghĩa</option>
+              </select>
+            </div>
+            <button id="btnToggleDisplayMode" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" title="Chuyển đổi ẩn/hiển thị Pinyin và Dịch nghĩa">👁️ Hiển Thị: Đầy Đủ</button>
+            <button id="btnEditCurrentSubtitles" class="btn btn-secondary" style="display: none; padding: 6px 12px; font-size: 0.8rem;">✏️ Sửa Phụ Đề</button>
+          </div>
+        </div>
+        <div class="sentence-list-wrapper" id="sentenceListWrapper">
+          <div class="focus-window-overlay"></div>
+          <div id="sentenceList" class="sentence-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL POPUP: UPLOAD & EDIT -->
+  <div id="uploadModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2 id="modalTitle">Tải Video Mới & Tạo Phụ Đề</h2>
+
+      <form id="uploadForm" style="margin-top: 15px;">
+        <input type="hidden" id="editVideoId" value="" />
+
+        <div class="modal-body-layout" style="display: flex; gap: 24px; align-items: flex-start;">
+          <!-- CỘT TRÁI: VIDEO PLAYER MINI -->
+          <div class="modal-video-column" style="flex: 1.2; display: flex; flex-direction: column; gap: 12px; min-width: 300px; position: sticky; top: 0;">
+            <div style="background: #000; border-radius: var(--radius-md); overflow: hidden; position: relative; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border);">
+              <video id="modalPreviewVideo" style="width: 100%; height: 100%; object-fit: contain;" controls></video>
+              <div id="modalVideoPlaceholder" style="position: absolute; inset: 0; background: rgba(15,23,42,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); text-align: center; padding: 20px; font-size: 0.85rem; gap: 8px;">
+                <span style="font-size: 1.8rem;">📹</span>
+                <span>Chọn tệp video hoặc mở sửa video để xem trực quan tại đây</span>
+              </div>
+            </div>
+
+            <div class="video-timing-helpers" style="background: var(--bg-input); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">Thời gian hiện tại:</span>
+                <span id="modalVideoTimeDisplay" style="font-family: monospace; font-size: 1.1rem; font-weight: bold; color: var(--primary);">0.0s</span>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.3;">
+                💡 <b>Mẹo tua nhanh:</b> Dùng các phím tua dưới đây, sau đó nhấn nút 🎯 cạnh ô thời gian ở bên phải để gán tự động!
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="btnModalRewind" class="btn btn-secondary" style="flex: 1; padding: 6px; font-size: 0.75rem; font-weight: bold;">⏪ Tua lại 1s</button>
+                <button type="button" id="btnModalForward" class="btn btn-secondary" style="flex: 1; padding: 6px; font-size: 0.75rem; font-weight: bold;">⏩ Tua đi 1s</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CỘT PHẢI: NHẬP LIỆU PHỤ ĐỀ -->
+          <div class="modal-form-fields-column" style="flex: 1.8; display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="inputVideoTitle" style="margin-bottom: 4px;">Tên bài học / Video:</label>
+              <input type="text" id="inputVideoTitle" placeholder="Ví dụ: Luyện chào hỏi hàng ngày" style="width: 100%;" />
+            </div>
+
+            <div class="form-group" id="videoFileInputGroup" style="margin-bottom: 0;">
+              <label for="inputVideoFile" style="margin-bottom: 4px;">Chọn File Video (MP4):</label>
+              <input type="file" id="inputVideoFile" accept="video/mp4,video/*" style="width: 100%;" />
+            </div>
+
+            <hr style="margin: 8px 0; border: 0; border-top: 1px solid var(--border);" />
+
+            <div class="form-group file-import-box" style="margin-bottom: 0; padding: 8px 12px; background: rgba(56,189,248,0.05); border: 1px dashed rgba(56,189,248,0.2); border-radius: var(--radius-md);">
+              <label style="margin-bottom: 4px; font-size: 0.8rem;">📁 Nhập nhanh câu thoại bằng File phụ đề (.txt, .csv, .srt):</label>
+              <input type="file" id="inputSubtitleFile" accept=".txt,.csv,.srt" style="margin-top: 4px; font-size: 0.8rem;" />
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+              <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">Danh Sách Câu Thoại</h3>
+            </div>
+
+            <div class="subtitle-row-header" style="margin-bottom: 4px;">
+              <div>Thời gian bắt đầu / kết thúc</div>
+              <div>Nội dung chữ Hán, Pinyin & Dịch nghĩa</div>
+            </div>
+
+            <div id="subtitleInputsContainer" style="max-height: 280px; overflow-y: auto; padding-right: 5px; margin-bottom: 5px;"></div>
+
+            <div style="display: flex; gap: 10px;">
+              <button type="button" id="btnAddSubtitleRow" class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.85rem;">➕ Thêm Câu Thủ Công</button>
+              <button type="button" id="btnClearSubtitles" class="btn btn-secondary" style="background: rgba(244,63,94,0.1); border-color: rgba(244,63,94,0.2); color: var(--danger); flex: 1; padding: 8px; font-size: 0.85rem;">🗑️ Xóa Hết Câu</button>
+            </div>
+
+            <button type="submit" id="btnSubmitForm" class="btn btn-success" style="width: 100%; padding: 12px; font-size: 1rem; margin-top: 5px;">💾 Lưu Vào Thư Viện</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- POPUP THÊM TỪ VỰNG MỚI -->
+  <div id="vocabFloatingPopup" class="vocab-popup" style="display: none; position: absolute; z-index: 10000; pointer-events: auto; flex-direction: column; align-items: stretch; padding: 12px 16px; min-width: 200px; gap: 6px;">
+    <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+      <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; min-width: 60px;">Từ:</span>
+      <span id="vocabWordDisplay" style="font-weight: 700; color: var(--primary); font-size: 1.1rem; font-family: var(--font-zh);"></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+      <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); min-width: 60px;">Pinyin:</label>
+      <input type="text" id="vocabPinyinInput" placeholder="Tự động sinh" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; color: var(--text-primary); font-size: 0.85rem;" />
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+      <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); min-width: 60px;">Nghĩa:</label>
+      <input type="text" id="vocabMeaningInput" placeholder="Nhập nghĩa (tùy chọn)" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; color: var(--text-primary); font-size: 0.85rem;" />
+    </div>
+    <div style="display: flex; gap: 6px; margin-top: 4px; justify-content: flex-end;">
+      <button id="btnCancelVocab" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.75rem;">Hủy</button>
+      <button id="btnSaveVocab" class="btn btn-primary" style="padding: 4px 12px; font-size: 0.75rem;">💾 Lưu từ vựng</button>
+    </div>
+  </div>
+
+  <!-- MODAL SỔ TỪ VỰNG -->
+  <div id="vocabModal" class="modal">
+    <div class="modal-content" style="max-width: 800px; width: 90%;">
+      <span class="close-modal" id="btnCloseVocabModal">&times;</span>
+      <h2 style="font-size: 1.4rem; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">📓 Sổ Từ Vựng Tích Lũy</h2>
+
+      <div class="vocab-table-wrapper" style="max-height: 400px; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border); font-weight: 700; color: var(--text-secondary); background: var(--bg-input);">
+              <th style="padding: 12px 10px;">Từ vựng (Word)</th>
+              <th style="padding: 12px 10px;">Pinyin</th>
+              <th style="padding: 12px 10px;">Ngữ cảnh (Context Video)</th>
+              <th style="padding: 12px 10px;">Giải nghĩa / Ghi chú</th>
+              <th style="padding: 12px 10px; text-align: center; width: 60px;">Xóa</th>
+            </tr>
+          </thead>
+          <tbody id="vocabTableBody"></tbody>
+        </table>
+        <div id="vocabEmptyMessage" style="text-align: center; color: var(--text-muted); padding: 40px 10px; display: none;">
+          <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;">📓 Sổ từ vựng đang trống!</p>
+          <p style="font-size: 0.85rem;">Hãy bôi đen (tô đen) các từ chữ Hán trong lúc xem video để lưu lại nhé.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <button id="btnExportVocab" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 16px;">📥 Xuất File Excel/CSV</button>
+        <button id="btnCloseVocabHubAction" class="btn btn-primary" style="font-size: 0.85rem; padding: 8px 16px;">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- TẤT CẢ JAVASCRIPT ĐƯỢC GỘP VÀO ĐÂY                         -->
+  <!-- ============================================================= -->
+  <script>
+    // ======================== db.js ================================
+    const DB_NAME = "ChineseShadowingDB_v2";
+    const DB_VERSION = 2;
+    const STORE_NAME = "videos";
+    const VOCAB_STORE_NAME = "vocabulary";
+
+    let dbInstance = null;
+
+    function initDB() {
+      if (dbInstance) return Promise.resolve(dbInstance);
+      return new Promise((resolve, reject) => {
+        try {
+          if (!window.indexedDB) throw new Error("IndexedDB is not supported.");
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains(VOCAB_STORE_NAME)) {
+              db.createObjectStore(VOCAB_STORE_NAME, { keyPath: "id", autoIncrement: true });
+            }
+          };
+          request.onsuccess = (e) => {
+            dbInstance = e.target.result;
+            dbInstance.onversionchange = () => {
+              dbInstance.close();
+              dbInstance = null;
+            };
+            resolve(dbInstance);
+          };
+          request.onerror = (e) => reject(e.target.error);
+        } catch (e) { reject(e); }
+      });
+    }
+
+    function getAllVideos() {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function getVideo(id) {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function addVideo(videoData) {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.add(videoData);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error("Transaction aborted"));
+      }));
+    }
+
+    function updateVideo(videoData) {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(videoData);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error("Transaction aborted"));
+      }));
+    }
+
+    function deleteVideo(id) {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.delete(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function getAllVocab() {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([VOCAB_STORE_NAME], "readonly");
+        const store = tx.objectStore(VOCAB_STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function addVocab(vocabItem) {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([VOCAB_STORE_NAME], "readwrite");
+        const store = tx.objectStore(VOCAB_STORE_NAME);
+        const req = store.add(vocabItem);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function updateVocab(vocabItem) {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([VOCAB_STORE_NAME], "readwrite");
+        const store = tx.objectStore(VOCAB_STORE_NAME);
+        const req = store.put(vocabItem);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function deleteVocab(id) {
+      return initDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction([VOCAB_STORE_NAME], "readwrite");
+        const store = tx.objectStore(VOCAB_STORE_NAME);
+        const req = store.delete(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    window.DbHelper = {
+      initDB,
+      getAllVideos,
+      getVideo,
+      addVideo,
+      updateVideo,
+      deleteVideo,
+      getAllVocab,
+      addVocab,
+      updateVocab,
+      deleteVocab
+    };
+
+    // ======================== subtitle.js ===========================
+    function parseCSVorTXT(text) {
+      const normalized = text.replace(/\r\n/g, '\n');
+      const lines = normalized.split('\n');
+      const sentences = [];
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+        const parts = line.includes('|') ? line.split('|') : line.split(',');
+        if (parts.length >= 3) {
+          sentences.push({
+            startTime: parseFloat(parts[0].trim()) || 0,
+            endTime: parseFloat(parts[1].trim()) || 0,
+            hanzi: parts[2]?.trim() || '',
+            pinyin: parts[3]?.trim() || '',
+            vietnamese: parts[4]?.trim() || ''
+          });
+        }
+      });
+      return sentences;
+    }
+
+    function parseSRT(data) {
+      const normalized = data.replace(/\r\n/g, '\n');
+      const pattern = /(\d+)\n(\d\d:\d\d:\d\d,\d\d\d) --> (\d\d:\d\d:\d\d,\d\d\d)\n([\s\S]*?)(?=\n\n|\n*$)/g;
+      let result;
+      const sentences = [];
+      function timeToSeconds(str) {
+        const parts = str.split(':');
+        const secParts = parts[2].split(',');
+        return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(secParts[0]) + parseInt(secParts[1]) / 1000;
+      }
+      while ((result = pattern.exec(normalized)) !== null) {
+        const start = timeToSeconds(result[2]);
+        const end = timeToSeconds(result[3]);
+        const textLines = result[4].split('\n').map(l => l.trim()).filter(l => l);
+        sentences.push({
+          startTime: parseFloat(start.toFixed(1)),
+          endTime: parseFloat(end.toFixed(1)),
+          hanzi: textLines[0] || '',
+          pinyin: textLines[1] || '',
+          vietnamese: textLines[2] || ''
+        });
+      }
+      return sentences;
+    }
+
+    window.SubtitleParser = { parseCSVorTXT, parseSRT };
+
+    // ======================== audio.js =============================
+    let audioCtx = null;
+    let animationFrameId = null;
+    let currentSource = null;
+    let currentAnalyser = null;
+    let liveStream = null;
+
+    function getAudioContext() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+
+    function createAnalyser(ctx) {
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      return analyser;
+    }
+
+    function drawWaveform(analyser, canvas, envelopeArray = null) {
+      const ctx = canvas.getContext("2d");
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      let phase = 0;
+
+      function draw() {
+        animationFrameId = requestAnimationFrame(draw);
+        const width = canvas.width,
+          height = canvas.height;
+        const isDark = document.documentElement.classList.contains("dark") || !document.documentElement.classList.contains("light");
+        ctx.fillStyle = isDark ? "rgba(15,23,42,0.2)" : "rgba(248,250,252,0.2)";
+        ctx.fillRect(0, 0, width, height);
+
+        analyser.getByteTimeDomainData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const dev = (dataArray[i] - 128) / 128;
+          sum += dev * dev;
+        }
+        const rms = Math.sqrt(sum / bufferLength);
+        const amp = rms * 2.5 + 0.05;
+        if (envelopeArray) envelopeArray.push(rms);
+
+        const configs = [
+          { stroke: isDark ? "rgba(99,102,241,0.8)" : "rgba(99,102,241,0.7)", speed: 0.08, amplitude: 0.9 * amp, freq: 1.5, lineWidth: 3.5, glow: true },
+          { stroke: isDark ? "rgba(168,85,247,0.5)" : "rgba(168,85,247,0.4)", speed: -0.06, amplitude: 0.6 * amp, freq: 2.0, lineWidth: 2, glow: false },
+          { stroke: isDark ? "rgba(236,72,153,0.4)" : "rgba(236,72,153,0.3)", speed: 0.12, amplitude: 0.4 * amp, freq: 1.0, lineWidth: 1.5, glow: false }
+        ];
+        phase += 0.05;
+
+        configs.forEach(cfg => {
+          ctx.beginPath();
+          ctx.lineWidth = cfg.lineWidth;
+          ctx.strokeStyle = cfg.stroke;
+          if (cfg.glow && isDark) { ctx.shadowBlur = 12;
+            ctx.shadowColor = cfg.stroke; } else { ctx.shadowBlur = 0; }
+          for (let x = 0; x < width; x++) {
+            const normX = x / width;
+            const angle = normX * Math.PI * 2 * cfg.freq + phase * cfg.speed * 10;
+            const env = Math.sin(normX * Math.PI);
+            const idx = Math.floor(normX * bufferLength);
+            const offset = ((dataArray[idx] - 128) / 128) * 0.4;
+            const y = (height / 2) + Math.sin(angle) * (height / 2.5) * cfg.amplitude * env + (offset * height * rms * env);
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        });
+        ctx.shadowBlur = 0;
+      }
+      draw();
+    }
+
+    function drawStaticEnvelope(canvas, envelope, strokeColor) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width,
+        h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const isDark = document.documentElement.classList.contains("dark") || !document.documentElement.classList.contains("light");
+      ctx.fillStyle = isDark ? "#0f172a" : "#f1f5f9";
+      ctx.fillRect(0, 0, w, h);
+
+      if (!envelope || envelope.length === 0) {
+        ctx.strokeStyle = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+        return;
+      }
+
+      ctx.strokeStyle = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+
+      const points = 120;
+      const step = envelope.length / points;
+      const barWidth = w / points;
+      let maxVal = Math.max(...envelope);
+      if (maxVal < 0.02) maxVal = 0.02;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = Math.max(2, barWidth - 2);
+      ctx.lineCap = "round";
+      for (let i = 0; i < points; i++) {
+        const idx = Math.floor(i * step);
+        if (idx >= envelope.length) break;
+        const val = envelope[idx];
+        const barHeight = (val / maxVal) * (h * 0.75);
+        const x = i * barWidth + barWidth / 2;
+        const yTop = (h - barHeight) / 2;
+        const yBottom = yTop + barHeight;
+        ctx.beginPath();
+        ctx.moveTo(x, yTop);
+        ctx.lineTo(x, yBottom);
+        ctx.stroke();
+      }
+    }
+
+    function drawPlaybackCursor(canvas, progress, cursorColor) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width,
+        h = canvas.height;
+      const x = progress * w;
+      ctx.strokeStyle = cursorColor;
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = cursorColor;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    function visualizeMicrophone(stream, canvas, envelopeArray = null) {
+      stopVisualization();
+      const ctx = getAudioContext();
+      currentAnalyser = createAnalyser(ctx);
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(currentAnalyser);
+      liveStream = stream;
+      drawWaveform(currentAnalyser, canvas, envelopeArray);
+    }
+
+    function visualizeAudioElement(audioElement, canvas, envelopeArray = null) {
+      stopVisualization();
+      const ctx = getAudioContext();
+      currentAnalyser = createAnalyser(ctx);
+      currentSource = ctx.createMediaElementSource(audioElement);
+      currentSource.connect(currentAnalyser);
+      currentAnalyser.connect(ctx.destination);
+      drawWaveform(currentAnalyser, canvas, envelopeArray);
+    }
+
+    function stopVisualization() {
+      if (animationFrameId) { cancelAnimationFrame(animationFrameId);
+        animationFrameId = null; }
+      if (currentSource) { try { currentSource.disconnect(); } catch (e) {} currentSource = null; }
+      if (currentAnalyser) { try { currentAnalyser.disconnect(); } catch (e) {} currentAnalyser = null; }
+    }
+
+    class AudioRecorder {
+      constructor() {
+        this.mediaRecorder = null;
+        this.chunks = [];
+        this.stream = null;
+      }
+      async start(canvasToVisualize = null, envelopeArray = null) {
+        this.chunks = [];
+        if (!this.stream || !this.stream.active || this.stream.getAudioTracks().length === 0 || this.stream.getAudioTracks()[0].readyState ===
+          'ended') {
+          this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        if (canvasToVisualize) visualizeMicrophone(this.stream, canvasToVisualize, envelopeArray);
+        this.mediaRecorder = new MediaRecorder(this.stream);
+        this.mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) this.chunks.push(e.data); };
+        return new Promise(resolve => { this.mediaRecorder.onstart = () => resolve();
+          this.mediaRecorder.start(); });
+      }
+      stop() {
+        return new Promise((resolve, reject) => {
+          if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") reject(new Error("Recording was not active"));
+          else {
+            this.mediaRecorder.onstop = () => {
+              stopVisualization();
+              resolve(new Blob(this.chunks, { type: 'audio/mp3' }));
+            };
+            this.mediaRecorder.stop();
+          }
+        });
+      }
+      get state() { return this.mediaRecorder ? this.mediaRecorder.state : "inactive"; }
+    }
+
+    window.AudioEngine = {
+      visualizeMicrophone,
+      visualizeAudioElement,
+      stopVisualization,
+      AudioRecorder,
+      drawStaticEnvelope,
+      drawPlaybackCursor,
+      originalEnvelope: [],
+      userEnvelope: []
+    };
+
+    // ======================== app.js ===============================
+    (function() {
+      const { initDB, getAllVideos, getVideo, addVideo, updateVideo, deleteVideo, getAllVocab, addVocab, updateVocab,
+          deleteVocab } = window.DbHelper;
+      const { parseCSVorTXT, parseSRT } = window.SubtitleParser;
+      const { AudioRecorder, visualizeAudioElement, stopVisualization, drawStaticEnvelope,
+        drawPlaybackCursor } = window.AudioEngine;
+
+      // ---------- State ----------
+      let currentVideoData = null;
+      const userRecordings = {};
+      let fullVideoAudioBlob = null;
+      let currentPracticeMode = 'speaking';
+      let listeningHideTarget = 'hanzi';
+      const listeningAnswers = {};
+      let activeLoopInterval = null;
+      let sentenceTimingInterval = null;
+      let activeUserAudio = null;
+      let isLoopSentenceEnabled = false;
+      let isPlayingFullVideo = false;
+      const audioRecorder = new AudioRecorder();
+      let originalEnvelope = [];
+      let userEnvelope = [];
+
+      // ---------- DOM refs ----------
+      const video = document.getElementById('mainVideo');
+      const sentenceListContainer = document.getElementById('sentenceList');
+      const videoLibraryList = document.getElementById('videoLibraryList');
+      const currentVideoTitle = document.getElementById('currentVideoTitle');
+      const btnPlayFullVideo = document.getElementById('btnPlayFullVideo');
+      const btnRecordFullVideo = document.getElementById('btnRecordFullVideo');
+      const btnPlayFullDubbing = document.getElementById('btnPlayFullDubbing');
+      const btnEditCurrentSubtitles = document.getElementById('btnEditCurrentSubtitles');
+      const btnToggleDisplayMode = document.getElementById('btnToggleDisplayMode');
+      const btnToggleLibrary = document.getElementById('btnToggleLibrary');
+      const mainLayout = document.getElementById('mainLayout');
+      const listeningControls = document.getElementById('listeningControls');
+      const selectListeningHideMode = document.getElementById('selectListeningHideMode');
+      const btnPlayPause = document.getElementById('btnPlayPause');
+      const videoTimeline = document.getElementById('videoTimeline');
+      const timeDisplay = document.getElementById('timeDisplay');
+      const videoSpeed = document.getElementById('videoSpeed');
+      const btnLoopSentence = document.getElementById('btnLoopSentence');
+      const waveformOriginalCanvas = document.getElementById('waveformOriginalCanvas');
+      const waveformUserCanvas = document.getElementById('waveformUserCanvas');
+      const visualizerStatus = document.getElementById('visualizerStatus');
+      const themeToggle = document.getElementById('themeToggle');
+      const modal = document.getElementById('uploadModal');
+      const btnOpenUploadModal = document.getElementById('btnOpenUploadModal');
+      const closeModal = document.querySelector('.close-modal');
+      const btnAddSubtitleRow = document.getElementById('btnAddSubtitleRow');
+      const btnClearSubtitles = document.getElementById('btnClearSubtitles');
+      const uploadForm = document.getElementById('uploadForm');
+      const inputSubtitleFile = document.getElementById('inputSubtitleFile');
+      const subtitleInputsContainer = document.getElementById('subtitleInputsContainer');
+
+      // ---------- Vocabulary popup elements ----------
+      const vocabPopup = document.getElementById('vocabFloatingPopup');
+      const vocabWordDisplay = document.getElementById('vocabWordDisplay');
+      const vocabPinyinInput = document.getElementById('vocabPinyinInput');
+      const vocabMeaningInput = document.getElementById('vocabMeaningInput');
+      const btnCancelVocab = document.getElementById('btnCancelVocab');
+      const btnSaveVocab = document.getElementById('btnSaveVocab');
+
+      let videoSource = null;
+      let videoAnalyser = null;
+
+      function getOrCreateVideoAnalyser(videoElement) {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!videoAnalyser) {
+          videoAnalyser = ctx.createAnalyser();
+          videoAnalyser.fftSize = 512;
+          videoSource = ctx.createMediaElementSource(videoElement);
+          videoSource.connect(videoAnalyser);
+          videoAnalyser.connect(ctx.destination);
+        }
+        return videoAnalyser;
+      }
+
+      // ---------- Theme / Display ----------
+      function getThemePreference() { try { return localStorage.getItem('theme') || 'dark'; } catch (e) { return 'dark'; } }
+
+      function setThemePreference(t) { try { localStorage.setItem('theme', t); } catch (e) {} }
+
+      function initTheme() {
+        const saved = getThemePreference();
+        if (themeToggle) {
+          const sun = themeToggle.querySelector('.sun-icon');
+          const moon = themeToggle.querySelector('.moon-icon');
+          if (saved === 'light') {
+            document.documentElement.classList.add('light');
+            if (sun) sun.style.display = 'none';
+            if (moon) moon.style.display = 'block';
+          } else {
+            document.documentElement.classList.remove('light');
+            if (sun) sun.style.display = 'block';
+            if (moon) moon.style.display = 'none';
+          }
+        }
+      }
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const isLight = document.documentElement.classList.toggle('light');
+          const sun = themeToggle.querySelector('.sun-icon');
+          const moon = themeToggle.querySelector('.moon-icon');
+          if (isLight) {
+            setThemePreference('light');
+            if (sun) sun.style.display = 'none';
+            if (moon) moon.style.display = 'block';
+          } else {
+            setThemePreference('dark');
+            if (sun) sun.style.display = 'block';
+            if (moon) moon.style.display = 'none';
+          }
+        });
+      }
+
+      function getDisplayModePreference() { try { return localStorage.getItem('displayMode') || 'full'; } catch (e) { return 'full'; } }
+
+      function setDisplayModePreference(m) { try { localStorage.setItem('displayMode', m); } catch (e) {} }
+
+      function initDisplayMode() {
+        const mode = getDisplayModePreference();
+        if (sentenceListContainer && btnToggleDisplayMode) {
+          if (mode === 'compact') {
+            sentenceListContainer.classList.add('compact-mode');
+            btnToggleDisplayMode.innerText = "🙈 Hiển Thị: Chữ Hán";
+          } else {
+            sentenceListContainer.classList.remove('compact-mode');
+            btnToggleDisplayMode.innerText = "👁️ Hiển Thị: Đầy Đủ";
+          }
+        }
+      }
+      if (btnToggleDisplayMode) {
+        btnToggleDisplayMode.addEventListener('click', () => {
+          const mode = getDisplayModePreference();
+          const next = mode === 'full' ? 'compact' : 'full';
+          setDisplayModePreference(next);
+          initDisplayMode();
+        });
+      }
+
+      if (btnToggleLibrary && mainLayout) {
+        btnToggleLibrary.addEventListener('click', () => {
+          const collapsed = mainLayout.classList.toggle('library-collapsed');
+          btnToggleLibrary.innerText = collapsed ? "📚 Hiện Thư Viện" : "📂 Ẩn Thư Viện";
+          btnToggleLibrary.classList.toggle('btn-primary', !collapsed);
+          btnToggleLibrary.classList.toggle('btn-secondary', collapsed);
+        });
+        btnToggleLibrary.innerText = "📚 Hiện Thư Viện";
+      }
+
+      if (selectListeningHideMode) {
+        selectListeningHideMode.addEventListener('change', () => {
+          listeningHideTarget = selectListeningHideMode.value;
+          for (let key in listeningAnswers) delete listeningAnswers[key];
+          renderSentences();
+        });
+      }
+
+      // ---------- Helpers ----------
+      function formatTime(seconds) {
+        if (isNaN(seconds) || seconds === Infinity) return "00:00";
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      }
+
+      function updateVisualizerStatus(msg) { if (visualizerStatus) visualizerStatus.innerText = msg; }
+
+      let videoSyncInterval = null;
+      let lastActiveSentenceId = null;
+
+      function startVideoSyncLoop() {
+        clearInterval(videoSyncInterval);
+        if (!isPlayingFullVideo) return;
+        videoSyncInterval = setInterval(() => {
+          if (video && !video.paused && !video.ended) highlightActiveSentence(video.currentTime);
+        }, 30);
+      }
+
+      function stopVideoSyncLoop() { clearInterval(videoSyncInterval); }
+
+      function stopAllPlayback() {
+        isPlayingFullVideo = false;
+        clearInterval(activeLoopInterval);
+        clearInterval(sentenceTimingInterval);
+        stopVideoSyncLoop();
+        stopVisualization();
+        updateVisualizerStatus("Sóng âm: Sẵn sàng so sánh");
+        if (activeUserAudio) { activeUserAudio.pause();
+          activeUserAudio = null; }
+        if (sentenceListContainer) sentenceListContainer.classList.remove('hide-controls');
+        document.querySelectorAll('.sentence-card').forEach(c => c.classList.remove('active'));
+        lastActiveSentenceId = null;
+      }
+
+      function normalizeText(text) {
+        if (!text) return '';
+        return text.toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+      }
+
+      function checkListeningAnswer(sentenceId, value, inputElement) {
+        const sentence = currentVideoData.sentences.find(s => s.id === sentenceId);
+        if (!sentence) return;
+        const correctText = listeningHideTarget === 'hanzi' ? sentence.hanzi : sentence.vietnamese;
+        const normalizedInput = normalizeText(value);
+        const normalizedCorrect = normalizeText(correctText);
+        const wrapper = inputElement.parentElement;
+        const feedbackIcon = wrapper.querySelector('.listening-feedback-icon');
+        const card = document.getElementById(`card-${sentenceId}`);
+        if (!value.trim()) {
+          inputElement.className = 'listening-input';
+          if (feedbackIcon) feedbackIcon.innerText = '';
+          if (card) card.classList.remove('completed');
+          listeningAnswers[sentenceId] = { correct: false, text: '' };
+          return;
+        }
+        const isCorrect = normalizedInput !== '' && normalizedInput === normalizedCorrect;
+        listeningAnswers[sentenceId] = { correct: isCorrect, text: value };
+        if (isCorrect) {
+          inputElement.className = 'listening-input correct';
+          if (feedbackIcon) feedbackIcon.innerText = '✅';
+          if (card) card.classList.add('completed');
+        } else {
+          inputElement.className = 'listening-input incorrect';
+          if (feedbackIcon) feedbackIcon.innerText = '❌';
+          if (card) card.classList.remove('completed');
+        }
+      }
+
+      function highlightActiveSentence(currentTime) {
+        if (!currentVideoData || !currentVideoData.sentences) return;
+        let activeSentence = null;
+        currentVideoData.sentences.forEach(s => {
+          const card = document.getElementById(`card-${s.id}`);
+          if (!card) return;
+          if (currentTime >= s.startTime && currentTime <= s.endTime) {
+            card.classList.add('active');
+            activeSentence = s;
+            if (lastActiveSentenceId !== s.id) {
+              lastActiveSentenceId = s.id;
+              const containerHeight = sentenceListContainer.clientHeight;
+              const cardTop = card.offsetTop;
+              const cardHeight = card.clientHeight;
+              sentenceListContainer.scrollTop = cardTop - (containerHeight * 0.35) + (cardHeight / 2);
+            }
+          } else {
+            card.classList.remove('active');
+          }
+        });
+        const wrapper = document.getElementById('sentenceListWrapper');
+        if (activeSentence) { if (wrapper) wrapper.classList.add('has-active'); } else { if (wrapper) wrapper.classList.remove(
+            'has-active');
+          lastActiveSentenceId = null; }
+        if (isLoopSentenceEnabled && activeSentence && video && !video.paused) {
+          if (currentTime >= activeSentence.endTime - 0.1) {
+            video.currentTime = activeSentence.startTime;
+          }
+        }
+      }
+
+      // ---------- Custom video controls ----------
+      function setupCustomVideoPlayer() {
+        if (btnPlayPause) {
+          btnPlayPause.addEventListener('click', () => {
+            if (video && video.paused) { isPlayingFullVideo = true;
+              video.play(); } else if (video) video.pause();
+          });
+        }
+        if (video) {
+          video.addEventListener('play', () => { if (btnPlayPause) btnPlayPause.innerText = "⏸";
+            startVideoSyncLoop(); });
+          video.addEventListener('pause', () => { if (btnPlayPause) btnPlayPause.innerText = "▶";
+            stopVideoSyncLoop(); if (audioRecorder.state !== "recording" && sentenceListContainer) sentenceListContainer
+              .classList.remove('hide-controls'); });
+          video.addEventListener('ended', () => { stopVideoSyncLoop(); if (sentenceListContainer) sentenceListContainer
+              .classList.remove('hide-controls'); });
+          video.addEventListener('timeupdate', () => {
+            if (!video.duration) return;
+            const pct = (video.currentTime / video.duration) * 100;
+            if (videoTimeline) videoTimeline.value = pct;
+            if (timeDisplay) timeDisplay.innerText = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+          });
+        }
+        if (videoTimeline) {
+          videoTimeline.addEventListener('input', () => {
+            if (video && video.duration) video.currentTime = (videoTimeline.value / 100) * video.duration;
+          });
+        }
+        if (videoSpeed) {
+          videoSpeed.addEventListener('change', () => { if (video) video.playbackRate = parseFloat(videoSpeed.value); });
+        }
+        if (btnLoopSentence) {
+          btnLoopSentence.addEventListener('click', () => {
+            isLoopSentenceEnabled = !isLoopSentenceEnabled;
+            btnLoopSentence.classList.toggle('active', isLoopSentenceEnabled);
+          });
+        }
+      }
+
+      function switchPracticeMode(mode) {
+        currentPracticeMode = mode;
+        if (mainLayout) {
+          if (mode === 'listening') {
+            mainLayout.classList.add('mode-listening');
+            if (listeningControls) listeningControls.style.display = 'flex';
+            if (btnToggleDisplayMode) btnToggleDisplayMode.style.display = 'none';
+          } else {
+            mainLayout.classList.remove('mode-listening');
+            if (listeningControls) listeningControls.style.display = 'none';
+            if (btnToggleDisplayMode) btnToggleDisplayMode.style.display = 'block';
+          }
+        }
+        document.querySelectorAll('.library-item').forEach(el => {
+          const speaking = el.querySelector('.btn-mode-speaking');
+          const listening = el.querySelector('.btn-mode-listening');
+          if (el.classList.contains('active')) {
+            if (speaking) speaking.classList.toggle('active', mode === 'speaking');
+            if (listening) listening.classList.toggle('active', mode === 'listening');
+          } else {
+            if (speaking) speaking.classList.remove('active');
+            if (listening) listening.classList.remove('active');
+          }
+        });
+        renderSentences();
+      }
+
+      // ---------- Library ----------
+      async function loadLibrary() {
+        try {
+          const videos = await getAllVideos();
+          if (!videoLibraryList) return;
+          videoLibraryList.innerHTML = '';
+          if (videos.length === 0) {
+            videoLibraryList.innerHTML =
+              '<p style="color:var(--text-muted); font-size:0.85rem; padding:10px;">Chưa có video nào. Hãy bấm nút Tải Video Mới!</p>';
+            return;
+          }
+          videos.forEach(item => {
+            const div = document.createElement('div');
+            div.className = `library-item ${currentVideoData && currentVideoData.id === item.id ? 'active' : ''}`;
+            div.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                <span class="video-title-span" title="${item.title}" style="font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">📹 ${item.title}</span>
+                <div class="library-item-menu-container">
+                  <button class="btn-menu-trigger" title="Tùy chọn">⋮</button>
+                  <div class="library-item-dropdown">
+                    <button class="dropdown-item btn-edit-lib" title="Chỉnh sửa phụ đề">✏️ Chỉnh sửa</button>
+                    <button class="dropdown-item btn-delete-lib" title="Xóa video">❌ Xóa video</button>
+                  </div>
+                </div>
+              </div>
+              <div class="library-item-modes">
+                <button class="btn-mode btn-mode-speaking ${currentVideoData && currentVideoData.id === item.id && currentPracticeMode === 'speaking' ? 'active' : ''}" title="Luyện Nói & Lồng Tiếng">🎙️ Luyện Nói</button>
+                <button class="btn-mode btn-mode-listening ${currentVideoData && currentVideoData.id === item.id && currentPracticeMode === 'listening' ? 'active' : ''}" title="Luyện Nghe & Điền Từ">🎧 Luyện Nghe</button>
+              </div>
+            `;
+            const trigger = div.querySelector('.btn-menu-trigger');
+            const dropdown = div.querySelector('.library-item-dropdown');
+            trigger.addEventListener('click', (e) => {
+              e.stopPropagation();
+              document.querySelectorAll('.library-item-dropdown').forEach(d => { if (d !== dropdown) d.style.display =
+                  'none'; });
+              dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            });
+            div.querySelector('.btn-edit-lib').addEventListener('click', (e) => { e.stopPropagation();
+              dropdown.style.display = 'none';
+              openEditModal(e, item.id); });
+            div.querySelector('.btn-delete-lib').addEventListener('click', (e) => { e.stopPropagation();
+              dropdown.style.display = 'none';
+              handleDeleteVideo(e, item.id); });
+            const titleSpan = div.querySelector('.video-title-span');
+            const speakingBtn = div.querySelector('.btn-mode-speaking');
+            const listeningBtn = div.querySelector('.btn-mode-listening');
+            titleSpan.addEventListener('click', () => { selectVideo(item);
+              switchPracticeMode('speaking'); });
+            speakingBtn.addEventListener('click', (e) => { e.stopPropagation();
+              selectVideo(item);
+              switchPracticeMode('speaking'); });
+            listeningBtn.addEventListener('click', (e) => { e.stopPropagation();
+              selectVideo(item);
+              switchPracticeMode('listening'); });
+            videoLibraryList.appendChild(div);
+          });
+          if (!currentVideoData && videos.length > 0) selectVideo(videos[0]);
+        } catch (err) { console.error("Lỗi tải thư viện:", err); }
+      }
+
+      function selectVideo(videoItem) {
+        stopAllPlayback();
+        currentVideoData = videoItem;
+        if (currentVideoTitle) currentVideoTitle.innerText = videoItem.title;
+        if (video) {
+          const url = URL.createObjectURL(videoItem.videoBlob);
+          video.src = url;
+          video.load();
+        }
+        if (mainLayout && !mainLayout.classList.contains('library-collapsed')) {
+          mainLayout.classList.add('library-collapsed');
+          if (btnToggleLibrary) { btnToggleLibrary.innerText = "📚 Hiện Thư Viện";
+            btnToggleLibrary.classList.remove('btn-primary');
+            btnToggleLibrary.classList.add('btn-secondary'); }
+        }
+        for (let key in userRecordings) delete userRecordings[key];
+        for (let key in listeningAnswers) delete listeningAnswers[key];
+        fullVideoAudioBlob = null;
+        if (btnPlayFullDubbing) btnPlayFullDubbing.disabled = true;
+        if (btnEditCurrentSubtitles) btnEditCurrentSubtitles.style.display = 'inline-block';
+        if (videoTimeline) videoTimeline.value = 0;
+        if (timeDisplay) timeDisplay.innerText = "00:00 / 00:00";
+        originalEnvelope = [];
+        userEnvelope = [];
+        drawStaticEnvelope(waveformOriginalCanvas, [], "#6366f1");
+        drawStaticEnvelope(waveformUserCanvas, [], "#a855f7");
+        switchPracticeMode(currentPracticeMode);
+        loadLibrary();
+      }
+
+      async function handleDeleteVideo(e, id) {
+        e.stopPropagation();
+        if (!confirm("Bạn có chắc muốn xóa video này?")) return;
+        try {
+          await deleteVideo(id);
+          if (currentVideoData && currentVideoData.id === id) {
+            currentVideoData = null;
+            if (video) video.src = "";
+            if (currentVideoTitle) currentVideoTitle.innerText = "Chọn một video để học";
+            if (sentenceListContainer) sentenceListContainer.innerHTML = "";
+            if (btnEditCurrentSubtitles) btnEditCurrentSubtitles.style.display = 'none';
+            stopAllPlayback();
+          }
+          loadLibrary();
+        } catch (err) { alert("Không thể xóa video: " + err.message); }
+      }
+
+      // ---------- Sentences ----------
+      function renderSentences() {
+        if (!sentenceListContainer) return;
+        sentenceListContainer.innerHTML = '';
+        if (!currentVideoData || !currentVideoData.sentences) return;
+        const isListening = currentPracticeMode === 'listening';
+        const isHanziHidden = isListening && listeningHideTarget === 'hanzi';
+        const isVietnameseHidden = isListening && listeningHideTarget === 'vietnamese';
+
+        currentVideoData.sentences.forEach(sentence => {
+          const card = document.createElement('div');
+          const isCompleted = isListening ? (listeningAnswers[sentence.id]?.correct || false) : !!userRecordings[
+            sentence.id];
+          card.className = `sentence-card ${isCompleted ? 'completed' : ''}`;
+          card.id = `card-${sentence.id}`;
+          const pinyinHTML = sentence.pinyin ? `<div class="sub-pinyin">${sentence.pinyin}</div>` : '';
+          let chineseHTML = '';
+          if (isHanziHidden) {
+            const userAns = listeningAnswers[sentence.id]?.text || '';
+            const statusClass = listeningAnswers[sentence.id]?.correct ? 'correct' : (userAns ? 'incorrect' : '');
+            const feedbackIcon = listeningAnswers[sentence.id]?.correct ? '✅' : (userAns ? '❌' : '');
+            chineseHTML =
+              `<div class="listening-input-wrapper"><input type="text" class="listening-input ${statusClass}" data-sentence-id="${sentence.id}" placeholder="Nhập chữ Hán..." value="${userAns}"><span class="listening-feedback-icon">${feedbackIcon}</span></div>`;
+          } else {
+            chineseHTML = `<div class="sub-chinese">${sentence.hanzi}</div>`;
+          }
+          let vietHTML = '';
+          if (isVietnameseHidden) {
+            const userAns = listeningAnswers[sentence.id]?.text || '';
+            const statusClass = listeningAnswers[sentence.id]?.correct ? 'correct' : (userAns ? 'incorrect' : '');
+            const feedbackIcon = listeningAnswers[sentence.id]?.correct ? '✅' : (userAns ? '❌' : '');
+            vietHTML =
+              `<div class="listening-input-wrapper"><input type="text" class="listening-input ${statusClass}" data-sentence-id="${sentence.id}" placeholder="Nhập dịch nghĩa..." value="${userAns}"><span class="listening-feedback-icon">${feedbackIcon}</span></div>`;
+          } else {
+            vietHTML = sentence.vietnamese ? `<div class="sub-vietnamese">${sentence.vietnamese}</div>` : '';
+          }
+          let controlsHTML = '';
+          if (isListening) {
+            controlsHTML = `<div class="controls-group"><button class="btn btn-primary btn-play-sen" title="Nghe câu thoại">🔊</button></div>`;
+          } else {
+            controlsHTML = `<div class="controls-group">
+              <button class="btn btn-primary btn-play-sen" title="Nghe Mẫu">🔊</button>
+              <button class="btn btn-danger btn-rec-sen" title="Ghi Âm">🎙️</button>
+              <button class="btn btn-success btn-user-sen" title="Nghe Giọng Mình" ${!userRecordings[sentence.id] ? 'disabled' : ''}>▶️</button>
+              <button class="btn btn-warning btn-para-sen" title="Phát Song Song" ${!userRecordings[sentence.id] ? 'disabled' : ''}>🔀</button>
+            </div>`;
+          }
+          card.innerHTML = `${chineseHTML}${pinyinHTML}${vietHTML}${controlsHTML}`;
+          card.querySelector('.btn-play-sen').addEventListener('click', () => playSentence(sentence.id));
+          if (!isListening) {
+            card.querySelector('.btn-rec-sen').addEventListener('click', () => toggleRecord(sentence.id));
+            card.querySelector('.btn-user-sen').addEventListener('click', () => playOnlyUserAudio(sentence.id));
+            card.querySelector('.btn-para-sen').addEventListener('click', () => playParallel(sentence.id));
+          } else {
+            const input = card.querySelector('.listening-input');
+            if (input) {
+              input.addEventListener('input', (e) => {
+                const sid = parseInt(e.target.dataset.sentenceId);
+                const val = e.target.value;
+                checkListeningAnswer(sid, val, e.target);
+              });
+            }
+          }
+          sentenceListContainer.appendChild(card);
+        });
+      }
+
+      function playSentence(id) {
+        stopAllPlayback();
+        const sentence = currentVideoData.sentences.find(s => s.id === id);
+        if (!sentence || !video) return;
+        const analyser = getOrCreateVideoAnalyser(video);
+        originalEnvelope = [];
+        video.currentTime = sentence.startTime;
+        video.muted = false;
+        video.volume = 1.0;
+        if (videoSpeed) video.playbackRate = parseFloat(videoSpeed.value);
+        video.play();
+        stopVisualization();
+        const drawFn = window.AudioEngine.drawWaveform || function() {};
+        drawFn(analyser, waveformOriginalCanvas, originalEnvelope);
+        updateVisualizerStatus(`🔊 Phát mẫu & ghi nhận âm gốc: Câu ${id}`);
+        sentenceTimingInterval = setInterval(() => {
+          if (video.currentTime >= sentence.endTime) {
+            video.pause();
+            clearInterval(sentenceTimingInterval);
+            stopVisualization();
+            drawStaticEnvelope(waveformOriginalCanvas, originalEnvelope, "#6366f1");
+            updateVisualizerStatus("Đã vẽ xong sóng âm gốc. Hãy click 'Ghi Âm' để lặp lại!");
+          }
+        }, 50);
+      }
+
+      async function toggleRecord(id) {
+        const card = document.getElementById(`card-${id}`);
+        if (!card) return;
+        const btnRecord = card.querySelector('.btn-rec-sen');
+        if (audioRecorder.state === "recording") {
+          try {
+            const blob = await audioRecorder.stop();
+            userRecordings[id] = blob;
+            btnRecord.innerHTML = "🎙️";
+            btnRecord.title = "Ghi Âm";
+            btnRecord.classList.remove("recording-active");
+            card.querySelector('.btn-user-sen').disabled = false;
+            card.querySelector('.btn-para-sen').disabled = false;
+            card.classList.add('completed');
+            stopVisualization();
+            drawStaticEnvelope(waveformUserCanvas, userEnvelope, "#a855f7");
+            updateVisualizerStatus(`✅ Thu âm câu ${id} xong. Xem so sánh sóng âm gốc (xanh) và của bạn (tím) ở bảng Studio!`);
+          } catch (err) { console.error(err);
+            updateVisualizerStatus("Lỗi khi dừng ghi âm"); }
+          return;
+        }
+        stopAllPlayback();
+        userEnvelope = [];
+        updateVisualizerStatus(`🎙️ Đang ghi âm câu ${id}... Nói ngay khi nghe âm mẫu!`);
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 512;
+          await audioRecorder.start();
+          stopVisualization();
+          const source = ctx.createMediaStreamSource(audioRecorder.stream);
+          source.connect(analyser);
+          const drawFn = window.AudioEngine.drawWaveform || function() {};
+          drawFn(analyser, waveformUserCanvas, userEnvelope);
+          btnRecord.innerHTML = "⏹️";
+          btnRecord.title = "Dừng ghi âm";
+          btnRecord.classList.add("recording-active");
+          const sentence = currentVideoData.sentences.find(s => s.id === id);
+          if (sentence) {
+            video.currentTime = sentence.startTime;
+            video.muted = false;
+            video.volume = 1.0;
+            if (videoSpeed) video.playbackRate = parseFloat(videoSpeed.value);
+            video.play();
+            sentenceTimingInterval = setInterval(() => {
+              if (video.currentTime >= sentence.endTime) { video.pause();
+                clearInterval(sentenceTimingInterval); }
+            }, 50);
+          }
+        } catch (err) { alert("Không thể truy cập Micro để ghi âm!");
+          updateVisualizerStatus("Lỗi Micro"); }
+      }
+
+      function playOnlyUserAudio(id) {
+        stopAllPlayback();
+        const blob = userRecordings[id];
+        if (!blob) return;
+        if (video) video.pause();
+        const userAudio = new Audio(URL.createObjectURL(blob));
+        activeUserAudio = userAudio;
+        updateVisualizerStatus(`🔊 Nghe giọng mình: Câu ${id}`);
+        userAudio.play();
+        let animId;
+
+        function tick() {
+          if (userAudio && !userAudio.paused && !userAudio.ended) {
+            const progress = userAudio.currentTime / userAudio.duration;
+            drawStaticEnvelope(waveformOriginalCanvas, originalEnvelope, "#6366f1");
+            drawPlaybackCursor(waveformOriginalCanvas, progress, "#10b981");
+            drawStaticEnvelope(waveformUserCanvas, userEnvelope, "#a855f7");
+            drawPlaybackCursor(waveformUserCanvas, progress, "#f43f5e");
+            animId = requestAnimationFrame(tick);
+          } else {
+            drawStaticEnvelope(waveformOriginalCanvas, originalEnvelope, "#6366f1");
+            drawStaticEnvelope(waveformUserCanvas, userEnvelope, "#a855f7");
+          }
+        }
+        userAudio.onended = () => { cancelAnimationFrame(animId);
+          stopAllPlayback();
+          updateVisualizerStatus("Sóng âm: Sẵn sàng so sánh"); };
+        tick();
+      }
+
+      function playParallel(id) {
+        stopAllPlayback();
+        const sentence = currentVideoData.sentences.find(s => s.id === id);
+        const blob = userRecordings[id];
+        if (!sentence || !blob || !video) return;
+        const userAudio = new Audio(URL.createObjectURL(blob));
+        activeUserAudio = userAudio;
+        video.muted = false;
+        video.volume = 0.3;
+        video.currentTime = sentence.startTime;
+        if (videoSpeed) video.playbackRate = parseFloat(videoSpeed.value);
+        updateVisualizerStatus(`🔀 Phát song song: Câu ${id}`);
+        video.play();
+        userAudio.play();
+        let animId;
+
+        function tick() {
+          if (userAudio && !userAudio.paused && !userAudio.ended) {
+            const progress = userAudio.currentTime / userAudio.duration;
+            drawStaticEnvelope(waveformOriginalCanvas, originalEnvelope, "#6366f1");
+            drawPlaybackCursor(waveformOriginalCanvas, progress, "#10b981");
+            drawStaticEnvelope(waveformUserCanvas, userEnvelope, "#a855f7");
+            drawPlaybackCursor(waveformUserCanvas, progress, "#f43f5e");
+            animId = requestAnimationFrame(tick);
+          } else {
+            drawStaticEnvelope(waveformOriginalCanvas, originalEnvelope, "#6366f1");
+            drawStaticEnvelope(waveformUserCanvas, userEnvelope, "#a855f7");
+          }
+        }
+        sentenceTimingInterval = setInterval(() => {
+          if (video.currentTime >= sentence.endTime || userAudio.ended) {
+            video.pause();
+            userAudio.pause();
+            video.volume = 1.0;
+            clearInterval(sentenceTimingInterval);
+            cancelAnimationFrame(animId);
+            stopAllPlayback();
+            updateVisualizerStatus("Sóng âm: Sẵn sàng so sánh");
+          }
+        }, 50);
+        tick();
+      }
+
+      // ---------- Full dubbing ----------
+      async function toggleRecordFullVideo() {
+        if (audioRecorder.state === "recording") {
+          try {
+            fullVideoAudioBlob = await audioRecorder.stop();
+            if (btnPlayFullDubbing) btnPlayFullDubbing.disabled = false;
+            if (btnRecordFullVideo) { btnRecordFullVideo.innerHTML = "🎙️ Thu Âm Cả Bài (Lồng Tiếng)";
+              btnRecordFullVideo.classList.remove("recording-active"); }
+            if (video) { video.muted = false;
+              video.pause();
+              video.onended = null; }
+            stopVisualization();
+            updateVisualizerStatus("✅ Đã ghi âm bản lồng tiếng cả bài!");
+          } catch (err) { console.error(err);
+            updateVisualizerStatus("Lỗi lồng tiếng"); }
+          return;
+        }
+        stopAllPlayback();
+        if (sentenceListContainer) sentenceListContainer.classList.add('hide-controls');
+        updateVisualizerStatus("🎙️ Đang lồng tiếng cả bài...");
+        try {
+          const videoAnalyserNode = getOrCreateVideoAnalyser(video);
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const micAnalyser = ctx.createAnalyser();
+          micAnalyser.fftSize = 512;
+          await audioRecorder.start();
+          stopVisualization();
+          const drawFn = window.AudioEngine.drawWaveform || function() {};
+          drawFn(videoAnalyserNode, waveformOriginalCanvas);
+          const micSource = ctx.createMediaStreamSource(audioRecorder.stream);
+          micSource.connect(micAnalyser);
+          drawFn(micAnalyser, waveformUserCanvas);
+          if (btnRecordFullVideo) { btnRecordFullVideo.innerHTML = "⏹️ Đang Thu... Bấm Để Dừng";
+            btnRecordFullVideo.classList.add("recording-active"); }
+          if (video) {
+            isPlayingFullVideo = true;
+            video.currentTime = 0;
+            video.muted = true;
+            if (videoSpeed) video.playbackRate = parseFloat(videoSpeed.value);
+            video.play();
+            video.onended = async () => { if (audioRecorder.state === "recording") await toggleRecordFullVideo(); };
+          }
+        } catch (err) { alert("Vui lòng cấp quyền Micro để lồng tiếng!");
+          updateVisualizerStatus("Lỗi Micro"); }
+      }
+
+      function playFullDubbing() {
+        if (!fullVideoAudioBlob || !video) return;
+        stopAllPlayback();
+        if (sentenceListContainer) sentenceListContainer.classList.add('hide-controls');
+        video.currentTime = 0;
+        video.muted = true;
+        if (videoSpeed) video.playbackRate = parseFloat(videoSpeed.value);
+        const fullAudio = new Audio(URL.createObjectURL(fullVideoAudioBlob));
+        activeUserAudio = fullAudio;
+        visualizeAudioElement(fullAudio, waveformUserCanvas);
+        updateVisualizerStatus("🔊 Phát bản lồng tiếng cả bài...");
+        isPlayingFullVideo = true;
+        video.play();
+        fullAudio.play();
+        video.onended = () => { fullAudio.pause();
+          video.muted = false;
+          video.onended = null;
+          stopVisualization();
+          updateVisualizerStatus("Sóng âm: Sẵn sàng so sánh"); };
+      }
+
+      // ---------- Modal (upload/edit) ----------
+      function addSubtitleRow(data = {}) {
+        if (!subtitleInputsContainer) return;
+        const div = document.createElement("div");
+        div.className = "subtitle-row";
+        div.innerHTML = `
+          <button type="button" class="btn-remove-row" title="Xóa dòng thoại này">❌</button>
+          <div class="time-inputs" style="display:flex;gap:8px;align-items:center;">
+            <div style="display:flex;gap:4px;align-items:center;flex:1;">
+              <input type="number" step="0.1" placeholder="Bắt đầu (s)" class="sub-start" value="${data.startTime ?? ''}" style="width:100%;">
+              <button type="button" class="btn-capture-start" title="Gán thời gian video hiện tại" style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:4px;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex-shrink:0;font-size:0.75rem;">🎯</button>
+            </div>
+            <span style="color:var(--text-muted);font-size:0.85rem;">~</span>
+            <div style="display:flex;gap:4px;align-items:center;flex:1;">
+              <input type="number" step="0.1" placeholder="Kết thúc (s)" class="sub-end" value="${data.endTime ?? ''}" style="width:100%;">
+              <button type="button" class="btn-capture-end" title="Lấy thời gian video hiện tại" style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:4px;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex-shrink:0;font-size:0.75rem;">🎯</button>
+            </div>
+          </div>
+          <input type="text" placeholder="Chữ Hán (bắt buộc)" class="sub-hanzi" style="width:100%;margin-top:0;" value="${data.hanzi ?? ''}">
+          <input type="text" placeholder="Pinyin (tùy chọn)" class="sub-pinyin" style="width:100%;margin-top:4px;" value="${data.pinyin ?? ''}">
+          <input type="text" placeholder="Dịch nghĩa (tùy chọn)" class="sub-viet" style="width:100%;margin-top:4px;" value="${data.vietnamese ?? ''}">
+        `;
+        div.querySelector('.btn-remove-row').addEventListener('click', () => div.remove());
+        const modalVideo = document.getElementById("modalPreviewVideo");
+        div.querySelector('.btn-capture-start').addEventListener('click', () => {
+          const inp = div.querySelector('.sub-start');
+          if (modalVideo && inp) inp.value = modalVideo.currentTime.toFixed(1);
+        });
+        div.querySelector('.btn-capture-end').addEventListener('click', () => {
+          const inp = div.querySelector('.sub-end');
+          if (modalVideo && inp) inp.value = modalVideo.currentTime.toFixed(1);
+        });
+        subtitleInputsContainer.appendChild(div);
+      }
+
+      async function openEditModal(e, id) {
+        if (e) e.stopPropagation();
+        try {
+          const item = await getVideo(id);
+          if (!item || !modal) return;
+          document.getElementById("modalTitle").innerText = "Chỉnh Sửa Phụ Đề Video";
+          document.getElementById("editVideoId").value = item.id;
+          document.getElementById("inputVideoTitle").value = item.title;
+          const modalVideo = document.getElementById("modalPreviewVideo");
+          const placeholder = document.getElementById("modalVideoPlaceholder");
+          if (modalVideo && item.videoBlob) {
+            const url = URL.createObjectURL(item.videoBlob);
+            modalVideo.src = url;
+            if (placeholder) placeholder.style.display = "none";
+          } else if (modalVideo) { modalVideo.removeAttribute("src");
+            modalVideo.load(); if (placeholder) placeholder.style.display = "flex"; }
+          if (subtitleInputsContainer) { subtitleInputsContainer.innerHTML = "";
+            item.sentences.forEach(s => addSubtitleRow(s)); }
+          modal.classList.add("show");
+        } catch (err) { console.error("Lỗi tải thông tin chỉnh sửa:", err); }
+      }
+
+      function setupModalEventListeners() {
+        const modalVideo = document.getElementById("modalPreviewVideo");
+        const placeholder = document.getElementById("modalVideoPlaceholder");
+        const timeDisplayModal = document.getElementById("modalVideoTimeDisplay");
+
+        if (btnOpenUploadModal && modal) {
+          btnOpenUploadModal.addEventListener("click", () => {
+            document.getElementById("modalTitle").innerText = "Tải Video Mới & Tạo Phụ Đề";
+            document.getElementById("editVideoId").value = "";
+            if (uploadForm) uploadForm.reset();
+            if (subtitleInputsContainer) { subtitleInputsContainer.innerHTML = "";
+              addSubtitleRow(); }
+            if (modalVideo) { modalVideo.removeAttribute("src");
+              modalVideo.load(); }
+            if (placeholder) placeholder.style.display = "flex";
+            if (timeDisplayModal) timeDisplayModal.innerText = "0.0s";
+            modal.classList.add("show");
+          });
+        }
+
+        if (btnEditCurrentSubtitles) {
+          btnEditCurrentSubtitles.addEventListener("click", () => {
+            if (currentVideoData) openEditModal(null, currentVideoData.id);
+          });
+        }
+
+        const inputVideoFile = document.getElementById("inputVideoFile");
+        if (inputVideoFile) {
+          inputVideoFile.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file && modalVideo) { modalVideo.src = URL.createObjectURL(file); if (placeholder) placeholder.style
+                .display = "none"; }
+          });
+        }
+
+        if (modalVideo && timeDisplayModal) {
+          modalVideo.addEventListener("timeupdate", () => { timeDisplayModal.innerText = modalVideo.currentTime.toFixed(
+              1) + "s"; });
+        }
+
+        document.getElementById("btnModalRewind").addEventListener("click", () => { if (modalVideo) modalVideo
+            .currentTime = Math.max(0, modalVideo.currentTime - 1.0); });
+        document.getElementById("btnModalForward").addEventListener("click", () => { if (modalVideo) modalVideo
+            .currentTime = Math.min(modalVideo.duration || 9999, modalVideo.currentTime + 1.0); });
+
+        const hideModal = () => {
+          if (modal) modal.classList.remove("show");
+          if (modalVideo) { modalVideo.pause();
+            modalVideo.removeAttribute("src");
+            modalVideo.load(); }
+        };
+        if (closeModal) closeModal.addEventListener("click", hideModal);
+        window.addEventListener("click", (e) => {
+          if (e.target === modal) hideModal();
+          document.querySelectorAll('.library-item-dropdown').forEach(d => d.style.display = 'none');
+        });
+
+        if (btnAddSubtitleRow) btnAddSubtitleRow.addEventListener("click", () => addSubtitleRow());
+        if (btnClearSubtitles) btnClearSubtitles.addEventListener("click", () => { if (subtitleInputsContainer)
+            subtitleInputsContainer.innerHTML = ""; });
+
+        if (inputSubtitleFile) {
+          inputSubtitleFile.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+              const text = ev.target.result;
+              const ext = file.name.split('.').pop().toLowerCase();
+              if (subtitleInputsContainer) subtitleInputsContainer.innerHTML = "";
+              const sentences = ext === 'srt' ? parseSRT(text) : parseCSVorTXT(text);
+              sentences.forEach(s => addSubtitleRow(s));
+            };
+            reader.readAsText(file);
+          });
+        }
+
+        const btnSubmit = document.getElementById("btnSubmitForm");
+        if (btnSubmit) {
+          btnSubmit.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById("editVideoId").value;
+            const title = document.getElementById("inputVideoTitle").value.trim();
+            const fileInput = document.getElementById("inputVideoFile");
+            const videoFile = fileInput ? fileInput.files[0] : null;
+
+            if (!title) { alert("⚠️ Vui lòng nhập tên bài học / video!"); return; }
+            if (!editId && !videoFile) { alert("⚠️ Vui lòng chọn một tệp video (MP4)!"); return; }
+
+            const rows = document.querySelectorAll(".subtitle-row");
+            if (rows.length === 0) { alert("⚠️ Vui lòng thêm ít nhất một dòng phụ đề!"); return; }
+
+            const sentences = [];
+            let hasError = false;
+            rows.forEach((row, idx) => {
+              if (hasError) return;
+              const start = row.querySelector(".sub-start")?.value;
+              const end = row.querySelector(".sub-end")?.value;
+              const hanzi = row.querySelector(".sub-hanzi")?.value.trim();
+              if (!start || !end || !hanzi) {
+                alert(
+                  `⚠️ Dòng thoại số ${idx+1} chưa điền đầy đủ thông tin!\n(Vui lòng điền đầy đủ Thời gian bắt đầu, Kết thúc và Chữ Hán)`
+                  );
+                hasError = true;
+                return;
+              }
+              sentences.push({
+                id: idx + 1,
+                startTime: parseFloat(start),
+                endTime: parseFloat(end),
+                hanzi: hanzi,
+                pinyin: row.querySelector(".sub-pinyin")?.value.trim() || "",
+                vietnamese: row.querySelector(".sub-viet")?.value.trim() || ""
+              });
+            });
+            if (hasError) return;
+
+            try {
+              if (editId) {
+                const item = await getVideo(parseInt(editId));
+                if (item) {
+                  item.title = title;
+                  item.sentences = sentences;
+                  if (videoFile) item.videoBlob = videoFile;
+                  await updateVideo(item);
+                }
+              } else {
+                await addVideo({ title, videoBlob: videoFile, sentences });
+              }
+              if (uploadForm) uploadForm.reset();
+              if (subtitleInputsContainer) subtitleInputsContainer.innerHTML = "";
+              hideModal();
+              if (editId && currentVideoData && currentVideoData.id === parseInt(editId)) {
+                const updated = await getVideo(parseInt(editId));
+                selectVideo(updated);
+              } else {
+                loadLibrary();
+              }
+            } catch (err) { alert("Lỗi khi lưu video: " + err.message); }
+          });
+        }
+      }
+
+      // ---------- Vocabulary Hub (nâng cấp) ----------
+      let selectedWord = "";
+      let ignoreHide = false;
+      let selectionTimeout = null; // để debounce
+
+      function getPinyinFromHanzi(hanzi) {
+        if (typeof window.pinyin !== 'undefined' && window.pinyin && typeof window.pinyin.pro === 'function') {
+          try {
+            return window.pinyin.pro(hanzi, { toneType: 'symbol' }) || '';
+          } catch (e) { return ''; }
+        }
+        return '';
+      }
+
+      function showVocabPopup(word, x, y) {
+        selectedWord = word;
+        vocabWordDisplay.innerText = word;
+        vocabPinyinInput.value = getPinyinFromHanzi(word);
+        vocabMeaningInput.value = '';
+
+        vocabPopup.style.display = 'flex';
+        vocabPopup.style.left = x + 'px';
+        vocabPopup.style.top = y + 'px';
+        vocabPopup.style.transform = 'translateX(-50%)';
+
+        ignoreHide = true;
+        setTimeout(() => { ignoreHide = false; }, 500);
+
+        setTimeout(() => vocabMeaningInput.focus(), 150);
+      }
+
+      function hideVocabPopup() {
+        vocabPopup.style.display = 'none';
+        vocabPinyinInput.value = '';
+        vocabMeaningInput.value = '';
+        selectedWord = '';
+        ignoreHide = false;
+        if (selectionTimeout) {
+          clearTimeout(selectionTimeout);
+          selectionTimeout = null;
+        }
+      }
+
+      // Xử lý selection change với debounce
+      function handleTextSelection() {
+        // Hủy timeout cũ nếu có
+        if (selectionTimeout) {
+          clearTimeout(selectionTimeout);
+          selectionTimeout = null;
+        }
+
+        // Lấy selection hiện tại
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+
+        // Kiểm tra có chứa chữ Hán và độ dài hợp lý (từ 1 đến 30 ký tự)
+        const hasChinese = /[\u4e00-\u9fa5]/.test(selectedText);
+        if (!selectedText || !hasChinese || selectedText.length === 0 || selectedText.length > 30) {
+          // Nếu không hợp lệ, ẩn popup sau một khoảng thời gian ngắn (nếu đang hiện)
+          if (!ignoreHide && vocabPopup.style.display === 'flex') {
+            selectionTimeout = setTimeout(() => {
+              if (!ignoreHide) hideVocabPopup();
+              selectionTimeout = null;
+            }, 100);
+          }
+          return;
+        }
+
+        // Kiểm tra vùng chọn có nằm trong danh sách câu không
+        try {
+          const range = selection.getRangeAt(0);
+          const container = document.getElementById('sentenceList');
+          if (!container || !container.contains(range.commonAncestorContainer)) {
+            if (!ignoreHide && vocabPopup.style.display === 'flex') {
+              selectionTimeout = setTimeout(() => {
+                if (!ignoreHide) hideVocabPopup();
+                selectionTimeout = null;
+              }, 100);
+            }
+            return;
+          }
+
+          const rect = range.getBoundingClientRect();
+          if (rect.width === 0 && rect.height === 0) return;
+
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + window.scrollY - 10;
+
+          // Debounce: chỉ hiển thị sau khi người dùng ngừng chọn 300ms
+          selectionTimeout = setTimeout(() => {
+            if (selectedWord !== selectedText || vocabPopup.style.display !== 'flex') {
+              showVocabPopup(selectedText, x, y);
+            } else {
+              // Cập nhật vị trí
+              vocabPopup.style.left = x + 'px';
+              vocabPopup.style.top = y + 'px';
+            }
+            selectionTimeout = null;
+          }, 300);
+        } catch (e) {
+          // Bỏ qua lỗi range
+        }
+      }
+
+      // Xử lý double-click (vẫn giữ để dự phòng)
+      function handleDoubleClick(e) {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        if (!selectedText) return;
+        const hasChinese = /[\u4e00-\u9fa5]/.test(selectedText);
+        if (!hasChinese || selectedText.length === 0 || selectedText.length > 30) return;
+
+        const target = e.target;
+        const container = document.getElementById('sentenceList');
+        if (!container || !container.contains(target)) return;
+
+        try {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          if (rect.width === 0 && rect.height === 0) return;
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + window.scrollY - 10;
+          // Hủy debounce cũ nếu có
+          if (selectionTimeout) {
+            clearTimeout(selectionTimeout);
+            selectionTimeout = null;
+          }
+          showVocabPopup(selectedText, x, y);
+        } catch (e) {}
+      }
+
+      // Lưu từ vựng từ popup
+      async function saveVocabFromPopup() {
+        if (!selectedWord) return;
+        const pinyin = vocabPinyinInput.value.trim();
+        const meaning = vocabMeaningInput.value.trim();
+
+        try {
+          const vocabItem = {
+            word: selectedWord,
+            pinyin: pinyin || '',
+            meaning: meaning || '',
+            videoTitle: currentVideoData ? currentVideoData.title : "Không rõ video",
+            videoId: currentVideoData ? currentVideoData.id : null,
+            timestamp: Date.now(),
+            note: meaning || ''
+          };
+          await addVocab(vocabItem);
+          hideVocabPopup();
+          alert("✅ Đã thêm từ vựng: " + selectedWord);
+        } catch (err) {
+          alert("Lỗi khi lưu từ vựng: " + err.message);
+        }
+      }
+
+      function cancelVocab() { hideVocabPopup(); }
+
+      // ---------- Tải bảng từ vựng ----------
+      async function loadVocabTable() {
+        const tbody = document.getElementById('vocabTableBody');
+        const emptyMsg = document.getElementById('vocabEmptyMessage');
+        if (!tbody || !emptyMsg) return;
+        tbody.innerHTML = '';
+        emptyMsg.style.display = 'none';
+        try {
+          const items = await getAllVocab();
+          if (!items || items.length === 0) { emptyMsg.style.display = 'block'; return; }
+          items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border)';
+            tr.innerHTML = `
+              <td style="padding:12px 10px;font-weight:700;color:var(--primary);font-size:1.15rem;font-family:var(--font-zh);">${item.word}</td>
+              <td style="padding:12px 10px;color:var(--text-secondary);font-size:0.85rem;">${item.pinyin || ''}</td>
+              <td style="padding:12px 10px;color:var(--text-secondary);font-size:0.85rem;" title="${item.videoTitle || ''}">📹 ${item.videoTitle || 'Video gốc'}</td>
+              <td style="padding:12px 10px;"><input type="text" class="vocab-note-input" data-id="${item.id}" placeholder="Thêm giải nghĩa..." value="${item.meaning || item.note || ''}" style="width:100%;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:0.85rem;outline:none;transition:border-color 0.2s;"></td>
+              <td style="padding:12px 10px;text-align:center;"><button class="btn-delete-vocab" data-id="${item.id}" style="background:transparent;border:none;cursor:pointer;color:var(--danger);font-size:0.95rem;padding:4px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;transition:background 0.2s;">❌</button></td>
+            `;
+            const input = tr.querySelector('.vocab-note-input');
+            input.addEventListener('blur', async (e) => {
+              const val = e.target.value;
+              item.meaning = val;
+              item.note = val;
+              await updateVocab(item);
+            });
+            input.addEventListener('keypress', async (e) => { if (e.key === 'Enter') input.blur(); });
+            tr.querySelector('.btn-delete-vocab').addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (confirm(`Bạn có chắc muốn xóa từ "${item.word}" khỏi sổ từ vựng?`)) {
+                await deleteVocab(item.id);
+                loadVocabTable();
+              }
+            });
+            tbody.appendChild(tr);
+          });
+        } catch (err) { console.error("Lỗi tải bảng từ vựng:", err); }
+      }
+
+      function exportVocabToCSV() {
+        getAllVocab().then(items => {
+          if (!items || items.length === 0) { alert("Sổ từ vựng rỗng, không có gì để xuất!"); return; }
+          let csv = "\ufeffTừ vựng,Pinyin,Ngữ cảnh video,Ghi chú giải nghĩa,Ngày thêm\n";
+          items.forEach(item => {
+            const date = new Date(item.timestamp).toLocaleDateString();
+            csv +=
+              `"${item.word.replace(/"/g,'""')}","${(item.pinyin||'').replace(/"/g,'""')}","${(item.videoTitle||'').replace(/"/g,'""')}","${(item.meaning||item.note||'').replace(/"/g,'""')}",${date}\n`;
+          });
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `So_Tu_Vung_ChineseShadowing_${new Date().toISOString().slice(0,10)}.csv`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        });
+      }
+
+      // ---------- Khởi tạo sự kiện cho Vocabulary ----------
+      function setupVocabEventListeners() {
+        // Lắng nghe selection change (bôi đen)
+        document.addEventListener('selectionchange', handleTextSelection);
+
+        // Lắng nghe double-click
+        document.addEventListener('dblclick', handleDoubleClick);
+
+        // Click ra ngoài popup: chỉ ẩn khi không ở chế độ ignoreHide
+        document.addEventListener('mousedown', (e) => {
+          if (vocabPopup && !vocabPopup.contains(e.target)) {
+            if (ignoreHide) return;
+            const active = document.activeElement;
+            if (active && (active.id === 'vocabPinyinInput' || active.id === 'vocabMeaningInput')) {
+              return;
+            }
+            // Hủy debounce nếu có
+            if (selectionTimeout) {
+              clearTimeout(selectionTimeout);
+              selectionTimeout = null;
+            }
+            hideVocabPopup();
+          }
+        });
+
+        // Nút Hủy
+        if (btnCancelVocab) btnCancelVocab.addEventListener('click', cancelVocab);
+
+        // Nút Lưu
+        if (btnSaveVocab) btnSaveVocab.addEventListener('click', saveVocabFromPopup);
+
+        // Enter để lưu
+        vocabMeaningInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveVocabFromPopup();
+          }
+        });
+        vocabPinyinInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            vocabMeaningInput.focus();
+          }
+        });
+
+        // Mở sổ từ vựng
+        const btnOpenVocab = document.getElementById('btnOpenVocabHub');
+        const vocabModal = document.getElementById('vocabModal');
+        const btnCloseVocab = document.getElementById('btnCloseVocabModal');
+        const btnCloseVocabAction = document.getElementById('btnCloseVocabHubAction');
+        const btnExport = document.getElementById('btnExportVocab');
+
+        if (btnOpenVocab && vocabModal) {
+          btnOpenVocab.addEventListener('click', () => {
+            loadVocabTable();
+            vocabModal.classList.add('show');
+          });
+        }
+        const hideVocabModal = () => { if (vocabModal) vocabModal.classList.remove('show'); };
+        if (btnCloseVocab) btnCloseVocab.addEventListener('click', hideVocabModal);
+        if (btnCloseVocabAction) btnCloseVocabAction.addEventListener('click', hideVocabModal);
+        if (btnExport) btnExport.addEventListener('click', exportVocabToCSV);
+        window.addEventListener('click', (e) => { if (e.target === vocabModal) hideVocabModal(); });
+      }
+
+      // ---------- Initialization ----------
+      function init() {
+        initTheme();
+        initDisplayMode();
+        setupCustomVideoPlayer();
+        setupModalEventListeners();
+        setupVocabEventListeners();
+
+        if (btnRecordFullVideo) btnRecordFullVideo.addEventListener('click', toggleRecordFullVideo);
+        if (btnPlayFullDubbing) btnPlayFullDubbing.addEventListener('click', playFullDubbing);
+        if (btnPlayFullVideo) {
+          btnPlayFullVideo.addEventListener('click', () => {
+            stopAllPlayback();
+            if (video) {
+              isPlayingFullVideo = true;
+              if (sentenceListContainer) sentenceListContainer.classList.add('hide-controls');
+              video.currentTime = 0;
+              video.volume = 1.0;
+              video.muted = false;
+              if (videoSpeed) video.playbackRate = parseFloat(videoSpeed.value);
+              video.play();
+            }
+          });
+        }
+
+        initDB().then(() => loadLibrary()).catch(err => { console.error("Không thể khởi động cơ sở dữ liệu:", err);
+          alert("Lỗi IndexedDB: Ứng dụng không thể tải dữ liệu."); });
+      }
+
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+      else init();
+    })();
+  </script>
+</body>
+</html>
